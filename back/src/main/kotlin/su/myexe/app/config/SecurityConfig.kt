@@ -13,11 +13,13 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import su.myexe.app.security.JwtAuthenticationFilter
+import su.myexe.app.security.JwtAuthenticationEntryPoint
 
 @Configuration
 @EnableMethodSecurity
 class SecurityConfig(
-	private val jwtAuthenticationFilter: JwtAuthenticationFilter
+	private val jwtAuthenticationFilter: JwtAuthenticationFilter,
+	private val authenticationEntryPoint: JwtAuthenticationEntryPoint
 ) {
 
 	@Bean
@@ -30,6 +32,7 @@ class SecurityConfig(
 					.requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 					.anyRequest().authenticated()
 			}
+			.exceptionHandling { it.authenticationEntryPoint(authenticationEntryPoint) }
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
 		return http.build()

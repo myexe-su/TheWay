@@ -6,8 +6,7 @@ import org.springframework.transaction.annotation.Transactional
 import su.myexe.app.model.CredentialProvider
 import su.myexe.app.repository.UserCredentialRepository
 import su.myexe.app.security.JwtService
-import su.myexe.app.exception.AbstractApiException
-import org.springframework.http.HttpStatus
+import su.myexe.app.exception.LoginFailedException
 
 @Service
 class AuthService(
@@ -19,25 +18,17 @@ class AuthService(
 	@Transactional(readOnly = true)
 	fun login(request: LoginRequest): TokenResponse {
 		val credential = credentialRepository.findByProviderAndLogin(CredentialProvider.LOCAL, request.login)
-			?: throw InvalidCredentialsException(request.login)
+			?: throw LoginFailedException(request.login)
 
 		val storedPassword = credential.password
 		if (storedPassword.isNullOrBlank() || !passwordEncoder.matches(request.password, storedPassword)) {
-			throw InvalidCredentialsException(request.login)
+			throw LoginFailedException(request.login)
 		}
 
 		val userId = credential.user.id
-			?: throw InvalidCredentialsException(request.login)
+			?: throw LoginFailedException(request.login)
 
 		val token = jwtService.generateToken(userId, credential.login)
 		return TokenResponse(token)
 	}
 }
-
-class InvalidCredentialsException(login: String) :
-	AbstractApiException(
-		status = HttpStatus.UNAUTHORIZED,
-		messageKey = "auth.invalidCredentials",
-		parameters = mapOf("login" to login),
-		debugMessage = "Invalid credentials for login '$login'"
-	)
