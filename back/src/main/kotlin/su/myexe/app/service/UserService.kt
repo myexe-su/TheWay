@@ -72,25 +72,6 @@ class UserService(
 	}
 
 	@Transactional
-	fun updateCredential(id: Long, request: CredentialRequest): UserCredential {
-		val credential = getCredential(id)
-		val encodedPassword = encodePasswordIfNeeded(
-			request.provider,
-			request.password,
-			current = credential.password
-		)
-		val updated = UserCredential(
-			id = credential.id,
-			provider = request.provider,
-			login = request.login,
-			password = encodedPassword,
-			refreshToken = request.refreshToken ?: credential.refreshToken,
-			user = credential.user
-		)
-		return credentialRepository.save(updated)
-	}
-
-	@Transactional
 	fun deleteCredential(id: Long) {
 		if (!credentialRepository.existsById(id)) {
 			throw CredentialNotFoundException(id)
