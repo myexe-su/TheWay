@@ -1,0 +1,150 @@
+@startuml
+
+enum ObjectType {
+  COMPANY
+  BRANCH
+  BUILDING
+  LEVEL
+  ROOM
+  ASSET
+}
+
+enum OrgUnitType {
+  COMPANY
+  DIVISION
+  DEPARTMENT
+  SECTION
+  TEAM
+}
+
+class Company {
+  id
+  name
+  --
+  ?? zones: List<Zone>
+  ?? objects List<Object>
+  ?? orgUnits List<OrgUnit>
+  ?? users: List<User>
+  ?? taskTemplates List<TaskTemplate>
+  ?? tasks: List<Task>
+}
+
+class Object {
+  id
+  name
+  --
+  type: ObjectType
+  parent: Object
+}
+
+class Zone {
+  id
+  name
+  gps_or_anything_else
+  --
+  objects: List<Object>
+}
+
+class OrgUnit {
+  id
+  name
+  --
+  type: OrgUnitType
+  parent: OrgUnit
+  users: List<User>
+}
+
+class User {
+  id
+  name
+}
+
+class TaskTemplate {
+  id
+  name
+  descr
+  deadline-ms
+  --
+  possibleTargets: List<Object>
+  possibleCreator: List<OrgUnit>
+  possibleAssignee: List<OrgUnit>
+}
+
+class Task {
+  id
+  name
+  descr
+  createdAt
+  startedAt
+  completedAt
+  deadline
+  --
+  target: Object
+  creator: OrgUnit
+  assignee: OrgUnit
+  executor: OrgUnit
+  messages: Message
+}
+
+class Message {
+  id
+  name
+  text
+}
+
+Company o-- Zone : zones
+Company o-- Object : objects
+Company o-- OrgUnit : orgUnits
+Company o-- TaskTemplate : taskTemplates
+Company o-- Task : tasks
+Company o-- User : users
+
+Zone o-- Object : objects
+
+Object --> ObjectType : type
+Object --> Object : parent
+
+OrgUnit --> OrgUnitType : type
+OrgUnit --> OrgUnit : parent
+OrgUnit o-- User : users
+
+TaskTemplate o-- Object : possibleTargets
+TaskTemplate o-- OrgUnit : possibleCreator
+TaskTemplate o-- OrgUnit : possibleAssignee
+
+Task --> Object : target
+Task --> OrgUnit : creator
+Task --> OrgUnit : assignee
+Task --> OrgUnit : executor
+Task o-- Message : messages
+
+Message o-- User : user
+
+legend
+  - надо с типами понять, сделать провто какие-то или возможность настраивать при большом списке
+    например: в компании только BRANCH и ASSET, то же и для орг единиц.
+
+  Шаги настройки:
+  - Настраивается структура компании по объектам и по орг единицам (вместе с пользователями)
+  - Создаются зоны с gps или какими то метками и списки объетов
+    например: ангар 5 (все что в ангаре, получается в этой зоне) и самолет 12
+  - создаются шаблоны задач, включают в себя возможные объекты; тех, кто может создавать зададачи с таким шаблоном
+    и тех на кого эти зти задачи можно назначить
+    (это все орг единицы, то есть например отдел снабжения может вешать задачи с этим шаблоном на отдел курьеров)
+  ?? добавить пользователям право редактировать структуру или изменять шаблоны
+     (может быть права по формам, сущностям или еще чему, надо думать)
+  ?? подумать не упустил ли чего
+  Шаги заведения задачи:
+  - открываем экран заведения задачи
+  - определяется зона автоматически или пользователь выбирает сам
+    например: ангар 5 определился по метке, выбираем машину 5 из того, что есть в ангаре
+  - выбираем орг единицу
+    например: подразделение IT, отдел смены лампочек
+  - выбираем шаблон из небольшого списка отфильтрованного по тому, что выбрали до этого
+    например поменять красную лампочку на зеленую
+  - создаем задачу
+end legend
+
+
+
+@enduml
