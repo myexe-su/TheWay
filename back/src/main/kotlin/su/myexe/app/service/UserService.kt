@@ -4,8 +4,10 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.security.crypto.password.PasswordEncoder
 import su.myexe.app.dto.CredentialRequest
 import su.myexe.app.dto.UserRequest
+import su.myexe.app.model.CredentialProvider
 import su.myexe.app.model.User
 import su.myexe.app.model.UserCredential
 import su.myexe.app.repository.UserCredentialRepository
@@ -14,7 +16,8 @@ import su.myexe.app.repository.UserRepository
 @Service
 class UserService(
 	private val repository: UserRepository,
-	private val credentialRepository: UserCredentialRepository
+	private val credentialRepository: UserCredentialRepository,
+	private val passwordEncoder: PasswordEncoder
 ) {
 
 	@Transactional(readOnly = true)
@@ -56,10 +59,11 @@ class UserService(
 	@Transactional
 	fun addCredential(userId: Long, request: CredentialRequest): UserCredential {
 		val user = findById(userId)
+		val encodedPassword = encodePasswordIfNeeded(request.provider, request.password)
 		val credential = UserCredential(
 			provider = request.provider,
 			login = request.login,
-			password = request.password,
+			password = encodedPassword,
 			refreshToken = request.refreshToken,
 			user = user
 		)
@@ -70,12 +74,17 @@ class UserService(
 	@Transactional
 	fun updateCredential(id: Long, request: CredentialRequest): UserCredential {
 		val credential = getCredential(id)
+		val encodedPassword = encodePasswordIfNeeded(
+			request.provider,
+			request.password,
+			current = credential.password
+		)
 		val updated = UserCredential(
 			id = credential.id,
 			provider = request.provider,
 			login = request.login,
-			password = request.password,
-			refreshToken = request.refreshToken,
+			password = encodedPassword,
+			refreshToken = request.refreshToken ?: credential.refreshToken,
 			user = credential.user
 		)
 		return credentialRepository.save(updated)
@@ -87,6 +96,17 @@ class UserService(
 			throw CredentialNotFoundException(id)
 		}
 		credentialRepository.deleteById(id)
+	}
+
+	private fun encodePasswordIfNeeded(
+		provider: CredentialProvider,
+		password: String?,
+		current: String? = null
+	): String? {
+		if (provider != CredentialProvider.LOCAL) {
+			return password ?: current
+		}
+		return password?.let { passwordEncoder.encode(it) } ?: current
 	}
 }
 
