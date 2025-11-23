@@ -1,9 +1,7 @@
 package su.myexe.app.service
 
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.security.crypto.password.PasswordEncoder
 import su.myexe.app.dto.CredentialRequest
 import su.myexe.app.dto.UserRequest
@@ -12,6 +10,8 @@ import su.myexe.app.model.User
 import su.myexe.app.model.UserCredential
 import su.myexe.app.repository.UserCredentialRepository
 import su.myexe.app.repository.UserRepository
+import su.myexe.app.exception.AbstractApiException
+import org.springframework.http.HttpStatus
 
 @Service
 class UserService(
@@ -53,12 +53,17 @@ class UserService(
 		credentialRepository.findById(id).orElseThrow { CredentialNotFoundException(id) }
 
 	@Transactional(readOnly = true)
-	fun listCredentials(userId: Long): List<UserCredential> =
-		credentialRepository.findAllByUserId(userId)
+	fun listCredentials(userId: Long): List<UserCredential> {
+		findById(userId)
+		return credentialRepository.findAllByUserId(userId)
+	}
 
 	@Transactional
 	fun addCredential(userId: Long, request: CredentialRequest): UserCredential {
 		val user = findById(userId)
+		if (request.password.isNullOrBlank() && request.provider == CredentialProvider.LOCAL) {
+			throw MissingCredentialDataException(userId)
+		}
 		val encodedPassword = encodePasswordIfNeeded(request.provider, request.password)
 		val credential = UserCredential(
 			provider = request.provider,
@@ -91,10 +96,26 @@ class UserService(
 	}
 }
 
-@ResponseStatus(HttpStatus.NOT_FOUND)
 class UserNotFoundException(id: Long) :
-	RuntimeException("User with id=$id not found")
+	AbstractApiException(
+		status = HttpStatus.NOT_FOUND,
+		messageKey = "user.notFound",
+		parameters = mapOf("id" to id.toString()),
+		debugMessage = "User with id=$id not found"
+	)
 
-@ResponseStatus(HttpStatus.NOT_FOUND)
 class CredentialNotFoundException(id: Long) :
-	RuntimeException("Credential with id=$id not found")
+	AbstractApiException(
+		status = HttpStatus.NOT_FOUND,
+		messageKey = "credential.notFound",
+		parameters = mapOf("id" to id.toString()),
+		debugMessage = "Credential with id=$id not found"
+	)
+
+class MissingCredentialDataException(userId: Long) :
+	AbstractApiException(
+		status = HttpStatus.BAD_REQUEST,
+		messageKey = "credential.missingData",
+		parameters = mapOf("userId" to userId.toString()),
+		debugMessage = "Credential data incomplete for user id=$userId"
+	)
