@@ -12,6 +12,8 @@ import su.myexe.app.exception.CredentialNotFoundException
 import su.myexe.app.exception.MissingCredentialDataException
 import su.myexe.app.exception.UserException
 import su.myexe.app.exception.UserNotFoundException
+import su.myexe.app.exception.CompanyException
+import su.myexe.app.exception.CompanyNotFoundException
 import java.time.Instant
 
 data class ApiErrorResponse(
@@ -30,6 +32,7 @@ class ApiExceptionHandler {
 	@ExceptionHandler(
 		UserException::class,
 		CredentialException::class,
+		CompanyException::class,
 		AuthException::class
 	)
 	fun handleDomainExceptions(ex: RuntimeException, request: WebRequest): ResponseEntity<ApiErrorResponse> {
@@ -77,6 +80,7 @@ class ApiExceptionHandler {
 	private fun statusFor(ex: RuntimeException): HttpStatus = when (ex) {
 		is UserNotFoundException -> HttpStatus.NOT_FOUND
 		is CredentialNotFoundException -> HttpStatus.NOT_FOUND
+		is CompanyNotFoundException -> HttpStatus.NOT_FOUND
 		is MissingCredentialDataException -> HttpStatus.BAD_REQUEST
 		is AuthException -> HttpStatus.UNAUTHORIZED
 		else -> HttpStatus.BAD_REQUEST
@@ -85,6 +89,7 @@ class ApiExceptionHandler {
 	private fun messageKey(ex: RuntimeException): String = when (ex) {
 		is UserException -> ex.messageKey
 		is CredentialException -> ex.messageKey
+		is CompanyException -> ex.messageKey
 		is AuthException -> ex.messageKey
 		else -> "error.unknown"
 	}
@@ -92,6 +97,7 @@ class ApiExceptionHandler {
 	private fun parameters(ex: RuntimeException): Map<String, String> = when (ex) {
 		is UserException -> ex.parameters
 		is CredentialException -> ex.parameters
+		is CompanyException -> ex.parameters
 		is AuthException -> ex.parameters
 		else -> emptyMap()
 	}

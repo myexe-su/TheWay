@@ -30,7 +30,7 @@ class SecurityConfig(
 				auth.requestMatchers("/api/auth/login").permitAll()
 					.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 					.requestMatchers(HttpMethod.GET, "/api/**").permitAll()
-					.anyRequest().authenticated()
+					.requestMatchers("/api/**").authenticated()
 			}
 			.exceptionHandling { it.authenticationEntryPoint(authenticationEntryPoint) }
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
