@@ -1,11 +1,14 @@
 package su.myexe.app.service
 
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.security.crypto.password.PasswordEncoder
 import su.myexe.app.dto.CredentialRequest
 import su.myexe.app.dto.UserRequest
+import su.myexe.app.exception.CredentialNotFoundException
+import su.myexe.app.exception.MissingCredentialDataException
+import su.myexe.app.exception.UserNotFoundException
+import su.myexe.app.model.CredentialProvider
 import su.myexe.app.model.User
 import su.myexe.app.model.UserCredential
 import su.myexe.app.repository.UserCredentialRepository
@@ -14,7 +17,8 @@ import su.myexe.app.repository.UserRepository
 @Service
 class UserService(
 	private val repository: UserRepository,
-	private val credentialRepository: UserCredentialRepository
+	private val credentialRepository: UserCredentialRepository,
+	private val passwordEncoder: PasswordEncoder
 ) {
 
 	@Transactional(readOnly = true)
@@ -50,35 +54,27 @@ class UserService(
 		credentialRepository.findById(id).orElseThrow { CredentialNotFoundException(id) }
 
 	@Transactional(readOnly = true)
-	fun listCredentials(userId: Long): List<UserCredential> =
-		credentialRepository.findAllByUserId(userId)
+	fun listCredentials(userId: Long): List<UserCredential> {
+		findById(userId)
+		return credentialRepository.findAllByUserId(userId)
+	}
 
 	@Transactional
 	fun addCredential(userId: Long, request: CredentialRequest): UserCredential {
 		val user = findById(userId)
+		if (request.password.isNullOrBlank() && request.provider == CredentialProvider.LOCAL) {
+			throw MissingCredentialDataException(userId)
+		}
+		val encodedPassword = encodePasswordIfNeeded(request.provider, request.password)
 		val credential = UserCredential(
 			provider = request.provider,
 			login = request.login,
-			password = request.password,
+			password = encodedPassword,
 			refreshToken = request.refreshToken,
 			user = user
 		)
 		user.credentials.add(credential)
 		return credentialRepository.save(credential)
-	}
-
-	@Transactional
-	fun updateCredential(id: Long, request: CredentialRequest): UserCredential {
-		val credential = getCredential(id)
-		val updated = UserCredential(
-			id = credential.id,
-			provider = request.provider,
-			login = request.login,
-			password = request.password,
-			refreshToken = request.refreshToken,
-			user = credential.user
-		)
-		return credentialRepository.save(updated)
 	}
 
 	@Transactional
@@ -88,12 +84,15 @@ class UserService(
 		}
 		credentialRepository.deleteById(id)
 	}
+
+	private fun encodePasswordIfNeeded(
+		provider: CredentialProvider,
+		password: String?,
+		current: String? = null
+	): String? {
+		if (provider != CredentialProvider.LOCAL) {
+			return password ?: current
+		}
+		return password?.let { passwordEncoder.encode(it) } ?: current
+	}
 }
-
-@ResponseStatus(HttpStatus.NOT_FOUND)
-class UserNotFoundException(id: Long) :
-	RuntimeException("User with id=$id not found")
-
-@ResponseStatus(HttpStatus.NOT_FOUND)
-class CredentialNotFoundException(id: Long) :
-	RuntimeException("Credential with id=$id not found")

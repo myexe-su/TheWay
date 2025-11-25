@@ -39,12 +39,6 @@ class UserCredentialController(
 		@Valid @RequestBody request: CredentialRequest
 	): CredentialResponse = CredentialMapper.toResponse(service.addCredential(userId, request))
 
-	@PutMapping("/{credentialId}")
-	fun update(
-		@PathVariable credentialId: Long,
-		@Valid @RequestBody request: CredentialRequest
-	): CredentialResponse = CredentialMapper.toResponse(service.updateCredential(credentialId, request))
-
 	@DeleteMapping("/{credentialId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	fun delete(

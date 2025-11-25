@@ -18,7 +18,6 @@ data class CredentialResponse(
 	val id: Long,
 	val provider: CredentialProvider,
 	val login: String,
-	val password: String?,
 	val refreshToken: String?
 )
 
@@ -27,7 +26,6 @@ object CredentialMapper {
 		id = entity.id ?: throw IllegalStateException("Credential id must not be null"),
 		provider = entity.provider,
 		login = entity.login,
-		password = entity.password,
 		refreshToken = entity.refreshToken
 	)
 }
