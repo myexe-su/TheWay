@@ -36,5 +36,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: production-app
-        path: build/libs/*.jar
+        path: back/build/libs/*.jar
         retention-days: 10
